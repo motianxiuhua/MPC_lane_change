@@ -1,4 +1,4 @@
-function [sys,x0,str,ts] = MPC_TrajPlanner(t,x,u,flag)
+function [sys,x0,str,ts] = Chapter6_2_4(t,x,u,flag)
 % 该程序功能：用点质量模型设计规划期，能够规避障碍物
 % 程序版本 V1.0，MATLAB版本：R2011a,采用S函数的标准形式，
 % 程序编写日期 2013.12.17
@@ -155,7 +155,7 @@ function sys = mdlOutputs(t,x,u)
     X_predict=zeros(Np,1);
 
  for i=1:1:Np
-     if i==Nc-1 
+     if i==Nc-1 %i==1时，状态变量的更新就等于初始值+增量
             ay(i)=A(1);
              % 以下完成状态量更新
             y_dot_predict(i,1)=State_Initial(1,1)+T*ay(i);
@@ -163,10 +163,10 @@ function sys = mdlOutputs(t,x,u)
             phi_predict(i,1)=State_Initial(3,1)+T*ay(i)/State_Initial(2,1);
             Y_predict(i,1)=State_Initial(4,1)+T*(State_Initial(2,1)*sin(State_Initial(3,1))+State_Initial(1,1)*cos(State_Initial(3,1)));
             X_predict(i,1)=State_Initial(5,1)+T*(State_Initial(2,1)*cos(State_Initial(3,1))-State_Initial(1,1)*sin(State_Initial(3,1)));  
-      else %if i<=5
+      else %i>=2时，状态变量的值等于上一次的值+增量 
             ay(i)=A(2);%这种写法是仅仅考虑两个控制周期
             y_dot_predict(i,1)=y_dot_predict(i-1,1)+T*ay(i);
-            x_dot_predict(i,1)=State_Initial(2,1);
+            x_dot_predict(i,1)=State_Initial(2,1);%车辆x方向加速度为0
             phi_predict(i,1)=phi_predict(i-1,1)+T*ay(i)/x_dot_predict(i-1,1);
             Y_predict(i,1)=Y_predict(i-1)+T*(State_Initial(2,1)*sin(phi_predict(i-1))+y_dot_predict(i-1)*cos(phi_predict(i-1)));
             X_predict(i,1)=X_predict(i-1)+T*(State_Initial(2,1)*cos(phi_predict(i-1))-y_dot_predict(i-1)*sin(phi_predict(i-1)));

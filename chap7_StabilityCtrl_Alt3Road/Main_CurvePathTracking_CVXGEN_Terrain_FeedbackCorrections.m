@@ -189,7 +189,7 @@ else % start control
 %***********Step (2). State estimation and Location **********************% 
     t_Start = tic; % 开始计时  
     %-----Update State Estimation of measured Vehicle Configuration--------%
-    [VehStateMeasured, ParaHAT] = func_StateEstimation(u); %   
+    [VehStateMeasured, ParaHAT] = func_StateEstimation(u); %transform variable from Carsim    
     PosX        = VehStateMeasured.X;
     PosY        = VehStateMeasured.Y;
     PosPsi      = VehStateMeasured.phi;    
@@ -310,7 +310,7 @@ else % start control
     params.Pyzmp2   = Envelope.P_yzmp2;
     params.Gyzmp    = 1.0; % 0.7; %归一化零力矩点的约束    
 
-    [vars, status] = csolve(params, settings);
+    [vars, status] = csolve(params, settings); %求解最优转角
     if (1 == status.converged) %if optimization succeeded.
         fwa_opt = vars.u_0; 
 %         for i=1:1:20

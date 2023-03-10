@@ -6,7 +6,7 @@ Model {
     NumRootInports	    0
     NumRootOutports	    0
     ParameterArgumentNames  ""
-    ComputedModelVersion    "1.245"
+    ComputedModelVersion    "1.246"
     NumModelReferences	    0
     NumTestPointedSignals   0
     NumProvidedFunctions    0
@@ -90,7 +90,7 @@ Model {
 	LoadSaveID		"0"
 	Extents			[1882.0, 878.0]
 	ZoomFactor		[1.5]
-	Offset			[-122.3670004215237, 146.33333333333326]
+	Offset			[-16.493190897714271, 122.77142857142869]
       }
       Object {
 	$PropName		"DockComponentsInfo"
@@ -125,9 +125,9 @@ Model {
   ModifiedByFormat	  "%<Auto>"
   LastModifiedBy	  "ÁºÐã»ª"
   ModifiedDateFormat	  "%<Auto>"
-  LastModifiedDate	  "Mon Feb 06 22:11:11 2023"
-  RTWModifiedTimeStamp	  597622244
-  ModelVersionFormat	  "1.%<AutoIncrement:245>"
+  LastModifiedDate	  "Wed Feb 15 17:44:36 2023"
+  RTWModifiedTimeStamp	  597880417
+  ModelVersionFormat	  "1.%<AutoIncrement:246>"
   SampleTimeColors	  off
   SampleTimeAnnotations	  off
   LibraryLinkDisplay	  "none"
@@ -239,7 +239,7 @@ Model {
 	  Description		  ""
 	  Components		  []
 	  StartTime		  "0.0"
-	  StopTime		  "10"
+	  StopTime		  "38"
 	  AbsTol		  "auto"
 	  AutoScaleAbsTol	  on
 	  FixedStep		  "0.01"
@@ -1132,7 +1132,7 @@ Model {
       BlockType		      Terminator
       Name		      "Terminator"
       SID		      "136"
-      Position		      [95, 405, 130, 435]
+      Position		      [90, 405, 125, 435]
       ZOrder		      31
       BlockMirror	      on
     }

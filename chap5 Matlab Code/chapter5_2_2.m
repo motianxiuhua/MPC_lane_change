@@ -217,6 +217,7 @@ function sys = mdlOutputs(t,x,u)
     H=cell2mat(H_cell);
     H=(H+H')/2;
     
+    %% 这一段在计算参考轨迹时X的预测合理吗？合理。以当前横向位置X0为初始值，v*T是每次仿真时间的位置间隔ΔX,X0+ΔX表示当前参考位置
     error_1=zeros(Ny*Np,1);
     Yita_ref_cell=cell(Np,1);
     for p=1:1:Np
@@ -289,14 +290,15 @@ function sys = mdlOutputs(t,x,u)
     lb=[delta_Umin;0];%（求解方程）状态量下界，包含控制时域内控制增量和松弛因子
     ub=[delta_Umax;M];%（求解方程）状态量上界，包含控制时域内控制增量和松弛因子
     
-    %% 开始求解过程
-      %options = optimset('Algorithm','active-set'); %新版quadprog不能用有效集法，这里选用内点法
-      options = optimset('Algorithm','interior-point-convex','MaxFunEvals',100000,'MaxIter',100000); 
-%       x_start=zeros(Nc+1,1);%加入一个起始点
-      [X,fval,exitflag]=quadprog(H,f,A_cons,b_cons,[],[],lb,ub,[],options);
-      fprintf('exitflag=%d\n',exitflag);
-      fprintf('H=%4.2f\n',H(1,1));
-      fprintf('f=%4.2f\n',f(1,1));
+  %% 开始求解过程
+   %options = optimset('Algorithm','active-set'); %新版quadprog不能用有效集法，这里选用内点法
+    options = optimset('Algorithm','interior-point-convex','MaxFunEvals',100000,'MaxIter',100000); 
+    %x_start=zeros(Nc+1,1);%加入一个起始点
+    [X,fval,exitflag]=quadprog(H,f,A_cons,b_cons,[],[],lb,ub,[],options);
+    fprintf('exitflag=%d\n',exitflag);
+    fprintf('H=%4.2f\n',H(1,1));
+    fprintf('f=%4.2f\n',f(1,1));
+    
     %% 计算输出
     u_piao=X(1);%得到控制增量
     U(1)=kesi(7,1)+u_piao;%当前时刻的控制量为上一刻时刻控制+控制增量

@@ -1,4 +1,4 @@
-function [sys,x0,str,ts] = MPC_Controller(t,x,u,flag)
+function [sys,x0,str,ts] = Chapter6_3(t,x,u,flag)
 % 该程序功能：用LTV MPC 和车辆简化动力学模型（小角度假设）设计控制器，接受来自规划器的期望轨迹，实现轨迹跟踪控制功能
 % 程序版本 V1.0，MATLAB版本：R2011a,采用S函数的标准形式，
 % 程序编写日期 2013.12.17

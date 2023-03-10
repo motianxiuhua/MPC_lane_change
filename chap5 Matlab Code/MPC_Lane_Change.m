@@ -340,28 +340,28 @@ function sys = mdlOutputs(t,x,u)
         if Record_lane_change_index==0 %说明全部值未过2
             Record_lane_change_index=Np_update;
         end
-         % 需要加一下双车道以及两个车道的位置比较 TODO
-        [s_min_another_lane,~] = Surroundings(40,-2,200,t);%另一车道前车
+         % 双车道四辆车的模型
+        [s_min_another_lane,~] = Surroundings(30,-2,100,t);%另一车道前车
         [~,s_max_another_lane] = Surroundings(25,2,-100,t);%另一车道后车
-        [s_min_same_lane,~] = Surroundings(40,2,100,t);%同一车道前车
+        [s_min_same_lane,~] = Surroundings(30,2,70,t);%同一车道前车
         [~,s_max_same_lane] = Surroundings(25,-2,-50,t);%同一车道后车
         %% 不考虑试探性变更车道
-        for i=1:Np_update 
-            if (X_predict(i)>=s_min_another_lane(i))||(X_predict(i)>=s_min_same_lane(i))||(X_predict(i)<=s_max_another_lane(i))||(X_predict(i)<=s_max_same_lane(i))
+%         for i=1:Np_update 
+%             if (X_predict(i)>=s_min_another_lane(i))||(X_predict(i)>=s_min_same_lane(i))||(X_predict(i)<=s_max_another_lane(i))||(X_predict(i)<=s_max_same_lane(i))
+%                 error("车辆发生碰撞，无法变道 %s\n",num2str(t))
+%             end
+%         end
+        %% 考虑试探性变更车道
+        for i=1:Record_lane_change_index 
+            if (X_predict(i)>=s_min_same_lane(i))||(X_predict(i)<=s_max_same_lane(i))
                 error("车辆发生碰撞，无法变道 %s\n",num2str(t))
             end
         end
-        %% 考虑试探性变更车道
-%         for i=1:Record_lane_change_index 
-%             if (X_predict(i)>=s_min_same_lane(i))||(X_predict(i)<=s_max_same_lane(i))
-%                 error("车辆发生碰撞，无法变道 %s\n",num2str(t))
-%             end
-%         end
-%         for i=1:(Np_update-Record_lane_change_index) 
-%             if (X_predict(i)>=s_min_another_lane(i))||(X_predict(i)<=s_max_another_lane(i))
-%                 error("车辆发生碰撞，无法变道 %s\n",num2str(t))
-%             end
-%         end
+        for i=1:(Np_update-Record_lane_change_index) 
+            if (X_predict(i)>=s_min_another_lane(i))||(X_predict(i)<=s_max_another_lane(i))
+                error("车辆发生碰撞，无法变道 %s\n",num2str(t))
+            end
+        end
     end
      
     %% 计算输出

@@ -1162,7 +1162,7 @@ ENTER_PARSFILE Animator\Sound\Modifier\SndMod130.par`08-02-2011`16:43:37
 #FullDataName Animator: Sound Modifier`Loudness: Lateral Speed Effects`Tire Speed Sound Modifiers
 
 #MiscYellow0
-define_output mod2_<<tire>> = sin(min(abs(alphL_<<tire>>), 15 / dr) * abs(vxcen<<tire>>);
+define_output mod2_<<tire>> = sin(min(abs(alphL_<<tire>>), 15 / dr) * abs(vxcen<<tire>>));
 #ENDMYellow
 
 

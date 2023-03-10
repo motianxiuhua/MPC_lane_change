@@ -1,4 +1,4 @@
-function [sys,x0,str,ts] =MY_MPCController3(t,x,u,flag)
+function [sys,x0,str,ts] =chapter3_4_2(t,x,u,flag)
 %***************************************************************% 
 % Input:
 % t是采样时间, x是状态变量, u是输入(是做成simulink模块的输入,即CarSim的输出),
