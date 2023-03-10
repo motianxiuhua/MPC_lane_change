@@ -17,9 +17,7 @@ switch flag,
   sys = mdlOutputs(t,x,u); % Calculate outputs
  
 %  case 4
-%   sys = mdlGetTimeOfNextVarHit(t,x,u); % Get next sample time 
-
- case {1,4,9} % Unused flags
+case {1,4,9} % Unused flags
   sys = [];
   
  otherwise
@@ -51,7 +49,7 @@ U=[0];%控制量初始化,这里面加了一个期望轨迹的输出，如果去掉，U为一维的
 % x = zeros(md.ne + md.pye + md.me + md.Hu*md.me,1);   
 % Initialize the discrete states.
 str = [];             % Set str to an empty matrix.
-ts  = [0.02 0];       % sample time: [period, offset]
+ts  = [0.1 0];       % sample time: [period, offset]
 %End of mdlInitializeSizes
 		      
 %==============================================================
@@ -107,7 +105,7 @@ function sys = mdlOutputs(t,x,u)
 %     Xs1=27.19;Xs2=56.46;%参数名称
 %     X_predict=zeros(Np,1);%用于保存预测时域内的纵向位置信息，这是计算期望轨迹的基础
 %     phi_ref=zeros(Np,1);%用于保存预测时域内的期望轨迹
-%     Y_ref=zeros(Np,1);%用于保存预测时域内的期望轨迹
+    Y_ref=zeros(Np,1);%用于保存预测时域内的期望轨迹
     
     %  以下计算kesi,即状态量与控制量合在一起   
     kesi=zeros(Nx+Nu,1);
@@ -121,8 +119,8 @@ function sys = mdlOutputs(t,x,u)
     delta_f=U(1);
     fprintf('Update start, u(1)=%4.2f\n',U(1))%设置数据格式并在屏幕上显示结果
 
-    T=0.02;%仿真步长
-    T_all=20;%总的仿真时间，主要功能是防止计算期望轨迹越界
+    T=0.1;%仿真步长
+    T_all=3;%总的仿真时间，主要功能是防止计算期望轨迹越界
      
     %权重矩阵设置 
     Q_cell=cell(Np,Np);
@@ -130,7 +128,7 @@ function sys = mdlOutputs(t,x,u)
         for j=1:1:Np
             if i==j
                 %Q_cell{i,j}=[200 0;0 100;];
-                Q_cell{i,j}=[2000 0;0 10000;];
+                Q_cell{i,j}=[0 0;0 10000;];%这里没有设置phi_ref
             else 
                 Q_cell{i,j}=zeros(Ny,Ny);               
             end
@@ -208,48 +206,37 @@ function sys = mdlOutputs(t,x,u)
     THETA=cell2mat(THETA_cell);%size(THETA)=[Ny*Np Nu*Nc]
     GAMMA=cell2mat(GAMMA_cell);%大写的GAMMA
     PHI=cell2mat(PHI_cell);
-%     Q=cell2mat(Q_cell);
+    Q=cell2mat(Q_cell);
     H_cell=cell(2,2);
-    H_cell{1,1}=R;
+    H_cell{1,1}=2*(THETA'*Q*THETA+R);
     H_cell{1,2}=zeros(Nu*Nc,1);
     H_cell{2,1}=zeros(1,Nu*Nc);
     H_cell{2,2}=Row;
     H=cell2mat(H_cell);
-%     H=(H+H')/2;
+    H=(H+H')/2;
     
     %% 这一段在计算参考轨迹时X的预测合理吗？合理。以当前横向位置X0为初始值，v*T是每次仿真时间的位置间隔ΔX,X0+ΔX表示当前参考位置
 %     error_1=zeros(Ny*Np,1);
-%     Yita_ref_cell=cell(Np,1);
-%     for p=1:1:Np
-%         if t+p*T>T_all
-%             X_DOT=x_dot*cos(phi)-y_dot*sin(phi);%惯性坐标系下纵向速度
-%             X_predict(Np,1)=X+X_DOT*Np*T;
-%             %X_predict(Np,1)=X+X_dot*Np*t;
-%             z1=shape/dx1*(X_predict(Np,1)-Xs1)-shape/2;
-%             z2=shape/dx2*(X_predict(Np,1)-Xs2)-shape/2;
-%             Y_ref(p,1)=dy1/2*(1+tanh(z1))-dy2/2*(1+tanh(z2));
-%             phi_ref(p,1)=atan(dy1*(1/cosh(z1))^2*(1.2/dx1)-dy2*(1/cosh(z2))^2*(1.2/dx2));
-%             Yita_ref_cell{p,1}=[phi_ref(p,1);Y_ref(p,1)];
-%             
-%         else
-%             X_DOT=x_dot*cos(phi)-y_dot*sin(phi);%惯性坐标系下纵向速度
-%             X_predict(p,1)=X+X_DOT*p*T;%首先计算出未来X的位置，X(t)=X+X_dot*t
-%             z1=shape/dx1*(X_predict(p,1)-Xs1)-shape/2;
-%             z2=shape/dx2*(X_predict(p,1)-Xs2)-shape/2;
-%             Y_ref(p,1)=dy1/2*(1+tanh(z1))-dy2/2*(1+tanh(z2));
-%             phi_ref(p,1)=atan(dy1*(1/cosh(z1))^2*(1.2/dx1)-dy2*(1/cosh(z2))^2*(1.2/dx2));
-%             Yita_ref_cell{p,1}=[phi_ref(p,1);Y_ref(p,1)];
-% 
-%         end
-%     end
-%     Yita_ref=cell2mat(Yita_ref_cell);
-%     error_1=Yita_ref-PSI*kesi-GAMMA*PHI; %求偏差
-%     f_cell=cell(1,2);
-%     f_cell{1,1}=2*error_1'*Q*THETA;
-%     f_cell{1,2}=0;
-% %     f=(cell2mat(f_cell))';
-%     f=-cell2mat(f_cell);
-  f=zeros(1,Nc+1);   
+    Yita_ref_cell=cell(Np,1);
+    for p=1:1:Np
+        if t+p*T>T_all 
+            Y_ref(p,1)=8/81*T_all^5-20/27*T_all^4+40/27*T_all^3;
+            phi_ref(p,1)=0;
+            Yita_ref_cell{p,1}=[phi_ref(p,1);Y_ref(p,1)];
+        else  
+            Y_ref(p,1)=8/81*(t+p*T)^5-20/27*(t+p*T)^4+40/27*(t+p*T)^3;
+            phi_ref(p,1)=0;
+            Yita_ref_cell{p,1}=[phi_ref(p,1);Y_ref(p,1)];
+        end
+    end
+    Yita_ref=cell2mat(Yita_ref_cell);
+    error_1=Yita_ref-PSI*kesi-GAMMA*PHI; %求偏差
+    f_cell=cell(1,2);
+    f_cell{1,1}=2*error_1'*Q*THETA;
+    f_cell{1,2}=0;
+%     f=(cell2mat(f_cell))';
+    f=-cell2mat(f_cell);
+
  %% 以下为约束生成区域
  %控制量约束
     A_t=zeros(Nc,Nc);%见falcone论文 P181
@@ -264,28 +251,28 @@ function sys = mdlOutputs(t,x,u)
     end 
     A_I=kron(A_t,eye(Nu));%求克罗内克积
     Ut=kron(ones(Nc,1),U(1));
-    umin=-0.1744*5;%维数与控制变量的个数相同
-    umax=0.1744*5;
-    delta_umin=-0.0148*0.4*5;
-    delta_umax=0.0148*0.4*5;
+    umin=-0.1744;%维数与控制变量的个数相同
+    umax=0.1744;
+    delta_umin=-0.0148*0.4;
+    delta_umax=0.0148*0.4;
     Umin=kron(ones(Nc,1),umin);
     Umax=kron(ones(Nc,1),umax);
     
     %输出量约束
-    ycmax=[0.21*5;4];
-    ycmin=[-0.3*5;-4];
+    ycmax=[0.21;6];
+    ycmin=[-0.3;-2];
     Ycmax=kron(ones(Np,1),ycmax);
     Ycmin=kron(ones(Np,1),ycmin);
-    persistent Destination_N;
-    if isempty(Destination_N)
-        Destination_N=Np;   
-    elseif Destination_N>=1
-        Ycmax(2*Destination_N,1)=3;%预测终端值需落在车道中间
-        Ycmin(2*Destination_N,1)=1;
-        Ycmax(2*Destination_N-1,1)=0.2;%预测终端值需落在车道中间
-        Ycmin(2*Destination_N-1,1)=-0.2;
-        Destination_N=Destination_N-1;
-    end
+%     persistent Destination_N;
+%     if isempty(Destination_N)
+%         Destination_N=Np;   
+%     elseif Destination_N>=1
+%         Ycmax(2*Destination_N,1)=3;%预测终端值需落在车道中间
+%         Ycmin(2*Destination_N,1)=1;
+%         Ycmax(2*Destination_N-1,1)=0.2;%预测终端值需落在车道中间
+%         Ycmin(2*Destination_N-1,1)=-0.2;
+%         Destination_N=Destination_N-1;
+%     end
     %结合控制量约束和输出量约束
     A_cons_cell={A_I zeros(Nu*Nc,1);-A_I zeros(Nu*Nc,1);THETA zeros(Ny*Np,1);-THETA zeros(Ny*Np,1)};%之所以再最后加一列是松弛因子的原因
     b_cons_cell={Umax-Ut;-Umin+Ut;Ycmax-PSI*kesi-GAMMA*PHI;-Ycmin+PSI*kesi+GAMMA*PHI};
@@ -301,15 +288,84 @@ function sys = mdlOutputs(t,x,u)
     
   %% 开始求解过程
    %options = optimset('Algorithm','active-set'); %新版quadprog不能用有效集法，这里选用内点法
-    options = optimset('Algorithm','interior-point-convex','MaxFunEvals',100000,'MaxIter',100000); 
+    options = optimset('Algorithm','interior-point-convex','MaxFunEvals',1000,'MaxIter',1000); 
     %x_start=zeros(Nc+1,1);%加入一个起始点
-    [X,fval,exitflag]=quadprog(H,f,A_cons,b_cons,[],[],lb,ub,[],options);%目标函数里有松弛因子，所以求出来的X是Nc+1维的
+    [X_Q,fval,exitflag]=quadprog(H,f,A_cons,b_cons,[],[],lb,ub,[],options);%目标函数里有松弛因子，所以求出来的X是Nc+1维的
     fprintf('exitflag=%d\n',exitflag);
     fprintf('H=%4.2f\n',H(1,1));
     fprintf('f=%4.2f\n',f(1,1));
     
+    %% 预测Controlled Vehicle的位置
+    X_predict=zeros(1,Np);
+    Np_update=Np;
+    for i=1:Np
+        if t+i*T<T_all
+            %第一次推导的值
+            if i==1
+                delta_f=X_Q(1)+delta_f;
+                y_dot_predict=y_dot+T*(-x_dot*phi_dot+2*(Ccf*(delta_f-(y_dot+lf*phi_dot)/x_dot)+Ccr*(lr*phi_dot-y_dot)/x_dot)/m);
+                x_dot_predict=x_dot+T*(y_dot*phi_dot+2*(Clf*Sf+Clr*Sr+Ccf*delta_f*(delta_f-(y_dot+phi_dot*lf)/x_dot))/m);
+                phi_predict=phi+T*phi_dot;
+                phi_dot_predict=phi_dot+T*((2*lf*Ccf*(delta_f-(y_dot+lf*phi_dot)/x_dot)-2*lr*Ccr*(lr*phi_dot-y_dot)/x_dot)/I);
+                X_predict(1)=X+T*(x_dot*cos(phi)-y_dot*sin(phi));
+                Y_predict_last=Y;
+                Y_predict=Y+T*(x_dot*sin(phi)+y_dot*cos(phi));
+                Record_lane_change_index=0;
+                if Y_predict>=2
+                    Record_lane_change_index=1;
+                end
+            else %只有在变道的过程才需要考虑是否超过安全区域的问题
+                if i <= Nc
+                    delta_f=X_Q(i)+delta_f;  
+                end
+                y_dot_predict=y_dot_predict+T*(-x_dot_predict*phi_dot_predict+2*(Ccf*(delta_f-(y_dot_predict+lf*phi_dot_predict)/x_dot_predict)+Ccr*(lr*phi_dot_predict-y_dot_predict)/x_dot_predict)/m);
+                x_dot_predict=x_dot_predict+T*(y_dot_predict*phi_dot_predict+2*(Clf*Sf+Clr*Sr+Ccf*delta_f*(delta_f-(y_dot_predict+phi_dot_predict*lf)/x_dot_predict))/m);
+                phi_predict=phi_predict+T*phi_dot_predict;
+                phi_dot_predict=phi_dot_predict+T*((2*lf*Ccf*(delta_f-(y_dot_predict+lf*phi_dot_predict)/x_dot_predict)-2*lr*Ccr*(lr*phi_dot_predict-y_dot_predict)/x_dot_predict)/I);
+                X_predict(i)=X_predict(i-1)+T*(x_dot_predict*cos(phi_predict)-y_dot_predict*sin(phi_predict));
+                Y_predict_last=Y_predict;
+                Y_predict=Y_predict+T*(x_dot_predict*sin(phi_predict)+y_dot_predict*cos(phi_predict));
+                if (Y_predict>=2) && (Y_predict_last<=2) %找2的分界线
+                    Record_lane_change_index=i;
+                end
+            end
+        else
+            if t+(i-1)*T<T_all
+                Np_update=i-1;
+            end
+            break
+        end
+    end
+    if i~=1
+        if Record_lane_change_index==0 %说明全部值未过2
+            Record_lane_change_index=Np_update;
+        end
+         % 需要加一下双车道以及两个车道的位置比较 TODO
+        [s_min_another_lane,~] = Surroundings(40,-2,200,t);%另一车道前车
+        [~,s_max_another_lane] = Surroundings(25,2,-100,t);%另一车道后车
+        [s_min_same_lane,~] = Surroundings(40,2,100,t);%同一车道前车
+        [~,s_max_same_lane] = Surroundings(25,-2,-50,t);%同一车道后车
+        %% 不考虑试探性变更车道
+        for i=1:Np_update 
+            if (X_predict(i)>=s_min_another_lane(i))||(X_predict(i)>=s_min_same_lane(i))||(X_predict(i)<=s_max_another_lane(i))||(X_predict(i)<=s_max_same_lane(i))
+                error("车辆发生碰撞，无法变道 %s\n",num2str(t))
+            end
+        end
+        %% 考虑试探性变更车道
+%         for i=1:Record_lane_change_index 
+%             if (X_predict(i)>=s_min_same_lane(i))||(X_predict(i)<=s_max_same_lane(i))
+%                 error("车辆发生碰撞，无法变道 %s\n",num2str(t))
+%             end
+%         end
+%         for i=1:(Np_update-Record_lane_change_index) 
+%             if (X_predict(i)>=s_min_another_lane(i))||(X_predict(i)<=s_max_another_lane(i))
+%                 error("车辆发生碰撞，无法变道 %s\n",num2str(t))
+%             end
+%         end
+    end
+     
     %% 计算输出
-    u_piao=X(1);%得到控制增量
+    u_piao=X_Q(1);%得到控制增量
     U(1)=kesi(7,1)+u_piao;%当前时刻的控制量为上一刻时刻控制+控制增量
    %U(2)=Yita_ref(2);%输出dphi_ref
     sys= U;
