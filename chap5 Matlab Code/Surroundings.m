@@ -1,4 +1,4 @@
-function [s_min,s_max] = Surroundings(v,a,s,delta_T)%似乎s_max也没有必要存在
+function [s_min,s_max] = Surroundings(v,a,s,delta_T,lane_num)%似乎s_max也没有必要存在
 v_initial=v;%初始速度 m/s
 s_initial=s;%初始位置 m
 Np=30;%预测步长
@@ -7,6 +7,27 @@ sample_T=0.1;%采样时间间隔
 %% 持续加速或者减速计算实际的位置，用于当作每次预测值的S0和V0（相当于传感器检测值）
 a_initial=a;% m/s^2
 v0=v_initial+a_initial*delta_T;
+%按照不同车道限速处理
+switch lane_num
+    case 1
+        if v0<17
+            v0=17;
+        elseif v0>22
+            v0=22;
+        end
+    case 2
+        if v0<23
+            v0=23;
+        elseif v0>27
+            v0=27;
+        end
+    case 3
+        if v0<28
+            v0=28;
+        elseif v0>33
+            v0=33;
+        end
+end
 s0=s_initial+v_initial*delta_T+1/2*a_initial*delta_T^2;
 %% 基于当前位置预测Surrounding Vehicle的位置
 a_min=-2;

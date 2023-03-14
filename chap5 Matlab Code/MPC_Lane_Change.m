@@ -6,7 +6,7 @@ function [sys,x0,str,ts] = MPC_Lane_Change(t,x,u,flag)
 % 状态量=[y_dot,x_dot,phi,phi_dot,Y,X]，控制量为前轮偏角delta_f
 
 
-switch flag,
+switch flag
  case 0
   [sys,x0,str,ts] = mdlInitializeSizes; % Initialization
   
@@ -120,8 +120,10 @@ function sys = mdlOutputs(t,x,u)
     fprintf('Update start, u(1)=%4.2f\n',U(1))%设置数据格式并在屏幕上显示结果
 
     T=0.1;%仿真步长
-    T_all=3;%总的仿真时间，主要功能是防止计算期望轨迹越界
-     
+    T_lane_1=3.0;
+    T_rest=2;
+    T_lane_2=3; 
+    T_all=T_lane_1+T_lane_2+T_rest;%总的仿真时间，主要功能是防止计算期望轨迹越界
     %权重矩阵设置 
     Q_cell=cell(Np,Np);
     for i=1:1:Np
@@ -219,12 +221,20 @@ function sys = mdlOutputs(t,x,u)
 %     error_1=zeros(Ny*Np,1);
     Yita_ref_cell=cell(Np,1);
     for p=1:1:Np
-        if t+p*T>T_all 
-            Y_ref(p,1)=8/81*T_all^5-20/27*T_all^4+40/27*T_all^3;
+        if t+p*T<=T_lane_1 
+            Y_ref(p,1)=8/81*(t+p*T)^5-20/27*(t+p*T)^4+40/27*(t+p*T)^3;
             phi_ref(p,1)=0;
             Yita_ref_cell{p,1}=[phi_ref(p,1);Y_ref(p,1)];
-        else  
-            Y_ref(p,1)=8/81*(t+p*T)^5-20/27*(t+p*T)^4+40/27*(t+p*T)^3;
+        elseif t+p*T<T_lane_1+T_rest
+            Y_ref(p,1)=8/81*T_lane_1^5-20/27*T_lane_1^4+40/27*T_lane_1^3;
+            phi_ref(p,1)=0;
+            Yita_ref_cell{p,1}=[phi_ref(p,1);Y_ref(p,1)];
+        elseif t+p*T<=T_lane_1+T_rest+T_lane_2
+            Y_ref(p,1)=8/81*(t+p*T)^5-260/81*(t+p*T)^4+3320/81*(t+p*T)^3-20800/81*(t+p*T)^2+64000/81*(t+p*T)-77176/81;
+            phi_ref(p,1)=0;
+            Yita_ref_cell{p,1}=[phi_ref(p,1);Y_ref(p,1)];
+        else
+            Y_ref(p,1)=8/81*T_all^5-260/81*T_all^4+3320/81*T_all^3-20800/81*T_all^2+64000/81*T_all-77176/81;
             phi_ref(p,1)=0;
             Yita_ref_cell{p,1}=[phi_ref(p,1);Y_ref(p,1)];
         end
@@ -259,7 +269,7 @@ function sys = mdlOutputs(t,x,u)
     Umax=kron(ones(Nc,1),umax);
     
     %输出量约束
-    ycmax=[0.21;6];
+    ycmax=[0.21;10];
     ycmin=[-0.3;-2];
     Ycmax=kron(ones(Np,1),ycmax);
     Ycmin=kron(ones(Np,1),ycmin);
@@ -299,7 +309,8 @@ function sys = mdlOutputs(t,x,u)
     X_predict=zeros(1,Np);
     Np_update=Np;
     for i=1:Np
-        if t+i*T<T_all
+        T_predict=vpa(t+i*T,3);
+        if T_predict<=T_all
             %第一次推导的值
             if i==1
                 delta_f=X_Q(1)+delta_f;
@@ -311,8 +322,14 @@ function sys = mdlOutputs(t,x,u)
                 Y_predict_last=Y;
                 Y_predict=Y+T*(x_dot*sin(phi)+y_dot*cos(phi));
                 Record_lane_change_index=0;
-                if Y_predict>=2
-                    Record_lane_change_index=1;
+                if T_predict<T_lane_1
+                    if Y_predict>=2 
+                        Record_lane_change_index=1;
+                    end
+                elseif T_predict>T_lane_1+T_rest 
+                    if Y_predict>=6
+                        Record_lane_change_index=1;
+                    end
                 end
             else %只有在变道的过程才需要考虑是否超过安全区域的问题
                 if i <= Nc
@@ -325,26 +342,39 @@ function sys = mdlOutputs(t,x,u)
                 X_predict(i)=X_predict(i-1)+T*(x_dot_predict*cos(phi_predict)-y_dot_predict*sin(phi_predict));
                 Y_predict_last=Y_predict;
                 Y_predict=Y_predict+T*(x_dot_predict*sin(phi_predict)+y_dot_predict*cos(phi_predict));
-                if (Y_predict>=2) && (Y_predict_last<=2) %找2的分界线
+                if T_predict<T_lane_1
+                    if (Y_predict>=2) && (Y_predict_last<=2) %找2的分界线
                     Record_lane_change_index=i;
+                    end
+                elseif T_predict>T_lane_1+T_rest 
+                    if (Y_predict)>=6 && (Y_predict_last<=6)%找6的分界线
+                        Record_lane_change_index=i;
+                    end
                 end
+                
             end
-        else
-            if t+(i-1)*T<T_all
-                Np_update=i-1;
-            end
-            break
+            if (T_predict-T)<T_lane_1 && T_predict>=T_lane_1 || (T_predict-T)<T_lane_1+T_rest+T_lane_2 && T_predict>=T_lane_1+T_rest+T_lane_2  
+                Np_update=i;
+                break
+            end            
         end
     end
-    if i~=1
-        if Record_lane_change_index==0 %说明全部值未过2
+    if (t<=T_lane_1) || (t>=T_lane_1+T_rest) && (t<T_all)
+        if Record_lane_change_index==0 %说明全部值未过2或6
             Record_lane_change_index=Np_update;
         end
+        if t<=T_lane_1
          % 双车道四辆车的模型
-        [s_min_another_lane,~] = Surroundings(30,-2,100,t);%另一车道前车
-        [~,s_max_another_lane] = Surroundings(25,2,-100,t);%另一车道后车
-        [s_min_same_lane,~] = Surroundings(30,2,70,t);%同一车道前车
-        [~,s_max_same_lane] = Surroundings(25,-2,-50,t);%同一车道后车
+            [s_min_another_lane,~] = Surroundings(40,-2,200,t,2);%另一车道前车
+            [~,s_max_another_lane] = Surroundings(25,2,-50,t,2);%另一车道后车
+            [s_min_same_lane,~] = Surroundings(40,2,200,t,1);%同一车道前车
+            [~,s_max_same_lane] = Surroundings(25,-2,-50,t,1);%同一车道后车
+        else
+            [s_min_another_lane,~] = Surroundings(30,-2,250,t-5,3);%另一车道前车
+            [~,s_max_another_lane] = Surroundings(25,2,100,t-5,3);%另一车道后车
+            [s_min_same_lane,~] = Surroundings(30,2,220,t-5,2);%同一车道前车
+            [~,s_max_same_lane] = Surroundings(25,-2,50,t-5,2);%同一车道后车
+        end
         %% 不考虑试探性变更车道
 %         for i=1:Np_update 
 %             if (X_predict(i)>=s_min_another_lane(i))||(X_predict(i)>=s_min_same_lane(i))||(X_predict(i)<=s_max_another_lane(i))||(X_predict(i)<=s_max_same_lane(i))
@@ -362,6 +392,7 @@ function sys = mdlOutputs(t,x,u)
                 error("车辆发生碰撞，无法变道 %s\n",num2str(t))
             end
         end
+
     end
      
     %% 计算输出
